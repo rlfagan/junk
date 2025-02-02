@@ -1,25 +1,18 @@
 import json
 import os
 import numpy as np
-import matplotlib.pyplot as plt
 
-# Paths for report and charts
-REPORT_DIR = "reports"
-CHARTS_DIR = "charts"
+# File path for vulnerability report
 vuln_file = "vulnerability_report.json"
-
-# Ensure output directories exist
-os.makedirs(REPORT_DIR, exist_ok=True)
-os.makedirs(CHARTS_DIR, exist_ok=True)
 
 # Check if the vulnerability report exists
 if not os.path.exists(vuln_file):
-    print(f"⚠️ Error: {vuln_file} not found. Ensure the scan runs before generating reports.")
-    exit(1)  # Exit the script if the file doesn't exist
-
-# Load the vulnerability report
-with open(vuln_file, "r", encoding="utf-8") as file:
-    results = json.load(file)
+    print(f"⚠️ Warning: {vuln_file} not found. Generating an empty summary.")
+    results = []
+else:
+    # Load the vulnerability report
+    with open(vuln_file, "r", encoding="utf-8") as file:
+        results = json.load(file)
 
 # Ensure there's data in the report
 if not results:
@@ -32,8 +25,8 @@ for entry in results:
     entry["CVSS_Score"] = entry.get("CVSS_Score", 0.0) if isinstance(entry.get("CVSS_Score"), (int, float)) else 0.0
 
 # Collecting valid scores for mean calculations
-epss_scores = [entry["EPSS_Score"] for entry in results if entry["EPSS_Score"] > 0]
-cvss_scores = [entry["CVSS_Score"] for entry in results if entry["CVSS_Score"] > 0]
+epss_scores = [entry["EPSS_Score"] for entry in results]
+cvss_scores = [entry["CVSS_Score"] for entry in results]
 kev_count = sum(1 for entry in results if entry.get("In_KEV", False))
 total_cves = len(results)
 
@@ -45,25 +38,6 @@ low_risk = [entry for entry in results if entry["EPSS_Score"] < 0.3]
 # Handle empty datasets to prevent mean calculation errors
 avg_epss = np.mean(epss_scores) if epss_scores else 0.0
 avg_cvss = np.mean(cvss_scores) if cvss_scores else 0.0
-
-# Generate charts
-plt.figure(figsize=(8, 5))
-plt.hist(epss_scores, bins=20, edgecolor="black", alpha=0.75, color="purple")
-plt.title("EPSS Score Distribution")
-plt.xlabel("EPSS Score")
-plt.ylabel("Number of Vulnerabilities")
-plt.grid(axis="y", linestyle="--", alpha=0.7)
-plt.savefig(os.path.join(CHARTS_DIR, "epss_distribution.png"))
-plt.close()
-
-plt.figure(figsize=(8, 5))
-plt.hist(cvss_scores, bins=10, edgecolor="black", alpha=0.75, color="blue")
-plt.title("CVSS Score Distribution")
-plt.xlabel("CVSS Score")
-plt.ylabel("Number of Vulnerabilities")
-plt.grid(axis="y", linestyle="--", alpha=0.7)
-plt.savefig(os.path.join(CHARTS_DIR, "cvss_distribution.png"))
-plt.close()
 
 # Generate markdown report
 summary_md = f"""
@@ -77,16 +51,66 @@ summary_md = f"""
 
 ---
 
+## 🚨 High-Risk Vulnerabilities (EPSS > 0.7)
+"""
+summary_md += "\n".join(
+    f"- **{cve['CVE']}** (EPSS: {cve['EPSS_Score']:.2f}) 🔴 [ExploitDB](https://www.exploit-db.com/search?cve={cve['CVE']})"
+    for cve in high_risk
+) if high_risk else "None"
+
+summary_md += """
+
+---
+
+## ⚠️ Medium-Risk Vulnerabilities (0.3 < EPSS ≤ 0.7)
+"""
+summary_md += "\n".join(
+    f"- **{cve['CVE']}** (EPSS: {cve['EPSS_Score']:.2f}) 🟠 [ExploitDB](https://www.exploit-db.com/search?cve={cve['CVE']})"
+    for cve in medium_risk
+) if medium_risk else "None"
+
+summary_md += """
+
+---
+
+## ✅ Low-Risk Vulnerabilities (EPSS ≤ 0.3)
+"""
+summary_md += "\n".join(
+    f"- **{cve['CVE']}** (EPSS: {cve['EPSS_Score']:.2f}) 🟢 [ExploitDB](https://www.exploit-db.com/search?cve={cve['CVE']})"
+    for cve in low_risk
+) if low_risk else "None"
+
+summary_md += """
+
+---
+
 ## 📈 Charts Summary
 ![EPSS Score Distribution](charts/epss_distribution.png)
-![CVSS Score Distribution](charts/cvss_distribution.png)
+![KEV Coverage](charts/kev_pie_chart.png)
+![EPSS vs. CVSS](charts/epss_vs_cvss.png)
+
+---
+
+## 📜 Full CVE Report
+<details>
+<summary>Click to Expand Full Report</summary>
+
+| CVE ID | EPSS Score | CVSS Score | In KEV? | ExploitDB |
+|--------|------------|------------|--------|-----------|
+"""
+summary_md += "\n".join(
+    f"| {entry['CVE']} | {entry['EPSS_Score']:.2f} | {entry['CVSS_Score']:.1f} | {'✅' if entry.get('In_KEV', False) else '❌'} | [Link](https://www.exploit-db.com/search?cve={entry['CVE']}) |"
+    for entry in results
+) if results else "| No vulnerabilities found | - | - | - | - |"
+
+summary_md += """
+</details>
 
 ---
 """
 
 # Write summary to file
-summary_file = os.path.join(REPORT_DIR, "summary.md")
-with open(summary_file, "w", encoding="utf-8") as f:
+with open("summary.md", "w", encoding="utf-8") as f:
     f.write(summary_md)
 
-print("✅ Markdown report and charts generated in 'reports/' and 'charts/' directories.")
+print("✅ Markdown report generated: summary.md")
