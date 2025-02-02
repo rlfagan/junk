@@ -52,17 +52,35 @@ summary_md = f"""
 ---
 
 ## 🚨 High-Risk Vulnerabilities (EPSS > 0.7)
-{"\n".join([f"- **{cve['CVE']}** (EPSS: {cve['EPSS_Score']:.2f}) 🔴 [ExploitDB](https://www.exploit-db.com/search?cve={cve['CVE']})" for cve in high_risk]) if high_risk else "None"}
+"""
+summary_md += "\n".join(
+    f"- **{cve['CVE']}** (EPSS: {cve['EPSS_Score']:.2f}) 🔴 [ExploitDB](https://www.exploit-db.com/search?cve={cve['CVE']})"
+    for cve in high_risk
+) if high_risk else "None"
+
+summary_md += """
 
 ---
 
 ## ⚠️ Medium-Risk Vulnerabilities (0.3 < EPSS ≤ 0.7)
-{"\n".join([f"- **{cve['CVE']}** (EPSS: {cve['EPSS_Score']:.2f}) 🟠 [ExploitDB](https://www.exploit-db.com/search?cve={cve['CVE']})" for cve in medium_risk]) if medium_risk else "None"}
+"""
+summary_md += "\n".join(
+    f"- **{cve['CVE']}** (EPSS: {cve['EPSS_Score']:.2f}) 🟠 [ExploitDB](https://www.exploit-db.com/search?cve={cve['CVE']})"
+    for cve in medium_risk
+) if medium_risk else "None"
+
+summary_md += """
 
 ---
 
 ## ✅ Low-Risk Vulnerabilities (EPSS ≤ 0.3)
-{"\n".join([f"- **{cve['CVE']}** (EPSS: {cve['EPSS_Score']:.2f}) 🟢 [ExploitDB](https://www.exploit-db.com/search?cve={cve['CVE']})" for cve in low_risk]) if low_risk else "None"}
+"""
+summary_md += "\n".join(
+    f"- **{cve['CVE']}** (EPSS: {cve['EPSS_Score']:.2f}) 🟢 [ExploitDB](https://www.exploit-db.com/search?cve={cve['CVE']})"
+    for cve in low_risk
+) if low_risk else "None"
+
+summary_md += """
 
 ---
 
@@ -79,8 +97,13 @@ summary_md = f"""
 
 | CVE ID | EPSS Score | CVSS Score | In KEV? | ExploitDB |
 |--------|------------|------------|--------|-----------|
-{"\n".join([f"| {entry['CVE']} | {entry['EPSS_Score']:.2f} | {entry['CVSS_Score']:.1f} | {'✅' if entry.get('In_KEV', False) else '❌'} | [Link](https://www.exploit-db.com/search?cve={entry['CVE']}) |" for entry in results]) if results else "| No vulnerabilities found | - | - | - | - |"}
+"""
+summary_md += "\n".join(
+    f"| {entry['CVE']} | {entry['EPSS_Score']:.2f} | {entry['CVSS_Score']:.1f} | {'✅' if entry.get('In_KEV', False) else '❌'} | [Link](https://www.exploit-db.com/search?cve={entry['CVE']}) |"
+    for entry in results
+) if results else "| No vulnerabilities found | - | - | - | - |"
 
+summary_md += """
 </details>
 
 ---
